@@ -2,30 +2,37 @@ import nodemailer from "nodemailer"
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
-    return res.status(405).json({ error: "method not allowed" })
+    return res.status(405).json({ message: "Method not allowed" })
   }
 
-  const { apiKey, email, pass, to_email, subject, body } = req.body
+  const { to, subject, text, apiKey } = req.body
 
-  if (apiKey !== "mysecretkey") {
-    return res.status(403).json({ error: "invalid key" })
+  if (!to || !subject || !text || !apiKey) {
+    return res.status(400).json({ message: "Bad request" })
+  }
+
+  if (apiKey !== process.env.API_KEY) {
+    return res.status(403).json({ message: "Invalid API Key" })
   }
 
   try {
     const transporter = nodemailer.createTransport({
       service: "gmail",
-      auth: { user: email, pass: pass }
+      auth: {
+        user: process.env.EMAIL,
+        pass: process.env.PASS
+      }
     })
 
     await transporter.sendMail({
-      from: email,
-      to: to_email,
+      from: process.env.EMAIL,
+      to,
       subject,
-      text: body
+      text
     })
 
-    res.status(200).json({ success: true })
-  } catch {
-    res.status(500).json({ error: true })
+    return res.status(200).json({ message: "Email sent successfully" })
+  } catch (err) {
+    return res.status(500).json({ error: err.message })
   }
 }
